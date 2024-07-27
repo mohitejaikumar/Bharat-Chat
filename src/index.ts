@@ -8,6 +8,11 @@ import { sendMessage } from "./helpers/sendMessage";
 import { ChatBot } from "./managers/ChatBot";
 import { formatMathInText } from "./helpers/formatMath";
 import { PDFBot } from "./managers/PDFBot";
+import { sendImage } from "./helpers/sendImage";
+import { deleteFile } from "./helpers/deleteFile";
+import { ImageGenerationBot } from "./managers/ImageGenerationBot";
+
+
 
 const app = express();
 app.use(express.json());
@@ -24,7 +29,7 @@ app.post("/webhook", async (req, res) => {
   const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
   const business_phone_number_id = req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
   const userName = req.body.entry?.[0].changes?.[0].contacts?.[0].profile?.name || "";
-
+  console.log("userName",userName);
   // check if the incoming message contains text
   if (message?.type === "text") {
     
@@ -32,8 +37,8 @@ app.post("/webhook", async (req, res) => {
     const user = userManager.getUser(message.from);
     if(user===null){
          // Add the user to the list
-        if(message.text.body !== "/START_TEXT" && message.text.body !== "/START_PDF"){
-          await sendMessage(business_phone_number_id,message.from,message.id,`Please start with \n /START_TEXT \n or \n /START_PDF`);
+        if(message.text.body !== "/START_TEXT" && message.text.body !== "/START_PDF" && message.text.body !== "/START_IMAGE"){
+          await sendMessage(business_phone_number_id,message.from,message.id,`Please type any of the following commands : \n 1. /START_TEXT  \n 2. /START_PDF \n 3. /START_IMAGE`);
         }
         else{
           userManager.addUser(message.from,userName,message.text.body);
@@ -44,6 +49,10 @@ app.post("/webhook", async (req, res) => {
           else if(message.text.body === "/START_PDF"){
             PDFBot.getInstance().startNewSession(message.from);
             await sendMessage(business_phone_number_id,message.from,message.id,"Please upload the PDF file");
+          }
+          else if(message.text.body === "/START_IMAGE"){
+
+            await sendMessage(business_phone_number_id,message.from,message.id,"Please tell me what kind of image you want to generate");
           }
         }
     }
@@ -58,6 +67,10 @@ app.post("/webhook", async (req, res) => {
           PDFBot.getInstance().startNewSession(message.from);
           await sendMessage(business_phone_number_id,message.from,message.id,"Please upload the PDF file");
         }
+        else if(message.text.body === "/START_IMAGE"){
+          user.lastStart = "/START_IMAGE";
+          await sendMessage(business_phone_number_id,message.from,message.id,"Please tell me what kind of image you want to generate");
+        }
         else if(user.lastStart === "/START_TEXT"){
             // Send to CHatBot 
             const reply = await ChatBot.getInstance().getReply(message.text.body,message.from);
@@ -67,6 +80,17 @@ app.post("/webhook", async (req, res) => {
             // Send to PDFBot
             const reply = await PDFBot.getInstance().getAnswer(message.text.body,message.from);
             await sendMessage(business_phone_number_id,message.from,message.id,formatMathInText(reply.toString()));
+        }
+        else if(user.lastStart === "/START_IMAGE"){
+            // Send to ChatBot
+            try{
+              const imageURL = await ImageGenerationBot.getInstance().generateImage(message.text.body);
+              console.log(imageURL);
+              await sendImage(business_phone_number_id,message.from,imageURL);
+            }
+            catch(err){
+              await sendMessage(business_phone_number_id,message.from,message.id,'SERVER ERROR');
+            }
         }
     }
     
@@ -94,14 +118,14 @@ app.post("/webhook", async (req, res) => {
     const user = userManager.getUser(message.from);
 
     if(user===null){
-      await sendMessage(business_phone_number_id,message.from,message.id,`Please start with \n /START_TEXT \n or \n /START_PDF`);
+      await sendMessage(business_phone_number_id,message.from,message.id,`Please type any of the following commands : \n 1. /START_TEXT  \n 2. /START_PDF \n 3. /START_IMAGE`);
     }
     else{
 
       const FILE_NAME = message?.document.filename.replace(/ /g,"_");
 
       if(user.lastStart !== "/START_PDF"){
-        await sendMessage(business_phone_number_id,message.from,message.id,"Please start with /START_PDF"); 
+        await sendMessage(business_phone_number_id,message.from,message.id,"Please type following command : \n /START_PDF"); 
       }
       else if(!FILE_NAME.endsWith(".pdf")){
         await sendMessage(business_phone_number_id,message.from,message.id,"Please send a PDF file");
@@ -134,6 +158,7 @@ app.post("/webhook", async (req, res) => {
             // Load PDF
             await PDFBot.getInstance().loadPDF(message.from,FILE_NAME);
             await sendMessage(business_phone_number_id,message.from,message.id,"How can I help you with this PDF?");
+            deleteFile(FILE_NAME);
         }
         catch(err){
             // console.log(err);
@@ -144,7 +169,9 @@ app.post("/webhook", async (req, res) => {
     }
     
     
-}
+  }
+
+  
 
 res.sendStatus(200);
 });
