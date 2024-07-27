@@ -11,11 +11,12 @@ import { PDFBot } from "./managers/PDFBot";
 import { sendImage } from "./helpers/sendImage";
 import { deleteFile } from "./helpers/deleteFile";
 import { ImageGenerationBot } from "./managers/ImageGenerationBot";
-
+import cors from "cors";
 
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
 
@@ -23,7 +24,7 @@ const userManager  = UserManager.getInstance();
 
 app.post("/webhook", async (req, res) => {
   // log incoming messages
-  // console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
+  console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
 
 
   const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];

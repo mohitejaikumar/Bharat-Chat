@@ -25,14 +25,16 @@ const PDFBot_1 = require("./managers/PDFBot");
 const sendImage_1 = require("./helpers/sendImage");
 const deleteFile_1 = require("./helpers/deleteFile");
 const ImageGenerationBot_1 = require("./managers/ImageGenerationBot");
+const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
+app.use((0, cors_1.default)());
 const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
 const userManager = UserManager_1.UserManager.getInstance();
 app.post("/webhook", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // log incoming messages
-    // console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
     var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+    // log incoming messages
+    console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
     const message = (_e = (_d = (_c = (_b = (_a = req.body.entry) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.changes[0]) === null || _c === void 0 ? void 0 : _c.value) === null || _d === void 0 ? void 0 : _d.messages) === null || _e === void 0 ? void 0 : _e[0];
     const business_phone_number_id = (_j = (_h = (_g = (_f = req.body.entry) === null || _f === void 0 ? void 0 : _f[0].changes) === null || _g === void 0 ? void 0 : _g[0].value) === null || _h === void 0 ? void 0 : _h.metadata) === null || _j === void 0 ? void 0 : _j.phone_number_id;
     const userName = ((_o = (_m = (_l = (_k = req.body.entry) === null || _k === void 0 ? void 0 : _k[0].changes) === null || _l === void 0 ? void 0 : _l[0].contacts) === null || _m === void 0 ? void 0 : _m[0].profile) === null || _o === void 0 ? void 0 : _o.name) || "";
